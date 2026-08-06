@@ -127,6 +127,34 @@
 
     #selection-status.show { opacity: 1; }
 
+
+
+    #game-over-screen {
+      position: fixed; inset: 0; z-index: 80; display: grid; place-items: center;
+      padding: 18px; background: radial-gradient(circle at 50% 30%, #28205c 0%, #080b18 60%, #02040a 100%);
+      transition: opacity .45s ease, visibility .45s ease;
+    }
+    #game-over-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .game-over-card {
+      width: min(94vw, 820px); display: grid; grid-template-columns: minmax(220px, .8fr) minmax(280px, 1.2fr);
+      overflow: hidden; border: 2px solid rgba(225,184,91,.8); border-radius: 24px;
+      background: linear-gradient(145deg, rgba(17,20,48,.98), rgba(40,20,67,.98));
+      box-shadow: 0 0 50px rgba(92,52,173,.45), inset 0 0 40px rgba(255,255,255,.03);
+    }
+    .game-over-art { min-height: 420px; background: url('assets/images/game-over-hero.png') center/cover no-repeat; }
+    .game-over-content { padding: clamp(24px,4vw,48px); display:flex; flex-direction:column; justify-content:center; text-align:center; color:#f9edd0; }
+    .game-over-content h1 { margin:0 0 12px; font-size:clamp(32px,5vw,58px); line-height:1; color:#ffe7a5; text-shadow:0 0 18px rgba(255,200,90,.35); }
+    .game-over-content p { margin:0 0 24px; font-size:clamp(16px,2vw,22px); line-height:1.45; }
+    .score-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:22px; }
+    .score-box { padding:13px; border:1px solid rgba(225,184,91,.45); border-radius:14px; background:rgba(0,0,0,.22); }
+    .score-box span { display:block; font-size:13px; opacity:.8; }
+    .score-box strong { display:block; margin-top:4px; font-size:30px; }
+    .go-button { width:100%; margin-top:10px; padding:14px 18px; border:1px solid rgba(255,223,145,.75); border-radius:14px; color:white; font:700 18px Georgia,serif; cursor:pointer; transition:.2s; }
+    .go-button:hover { transform:translateY(-2px); filter:brightness(1.15); box-shadow:0 0 24px rgba(190,120,255,.45); }
+    #retry-game { background:linear-gradient(90deg,#6e2ab5,#9b3ed4); }
+    #change-character { background:linear-gradient(90deg,#174b93,#2671ba); }
+    @media (max-width:680px){ .game-over-card{grid-template-columns:1fr;} .game-over-art{min-height:240px;} .game-over-content{padding:22px;} }
+
     @media (max-aspect-ratio: 4/5) {
       #character-screen { padding: 0; overflow: auto; align-items: center; }
       .selection-stage { width: 100vw; min-width: 760px; }
@@ -150,6 +178,28 @@
     </div>
   </section>
 
+
+
+  <section id="game-over-screen" class="hidden" aria-label="Fin de la partida">
+    <div class="game-over-card">
+      <div class="game-over-art" role="img" aria-label="Alquimista descansando en el laboratorio después del intento"></div>
+      <div class="game-over-content">
+        <h1>¡Vuelve a intentarlo, campeón!</h1>
+        <p>Cada intento te acerca a dominar el Reino de la Química.</p>
+        <div class="score-row">
+          <div class="score-box"><span>Puntuación</span><strong id="final-score">0</strong></div>
+          <div class="score-box"><span>Récord</span><strong id="high-score">0</strong></div>
+        </div>
+        <button id="retry-game" class="go-button" type="button">↻ Volver a intentar</button>
+        <button id="change-character" class="go-button" type="button">Cambiar personaje</button>
+      </div>
+    </div>
+  </section>
+
+  <audio id="intro-audio" src="assets/sound/intro.mp3" loop preload="auto"></audio>
+  <audio id="selection-audio" src="assets/sound/selection-click.wav" preload="auto"></audio>
+  <audio id="game-over-audio" src="assets/sound/game-over.mp3" preload="auto"></audio>
+
   <script src="js/phaser.js"></script>
   <script src="js/Boot.js"></script>
   <script src="js/Preloader.js"></script>
@@ -159,20 +209,45 @@
   <script>
     (function () {
       var screen = document.getElementById('character-screen');
+      var gameOverScreen = document.getElementById('game-over-screen');
       var status = document.getElementById('selection-status');
       var characters = Array.prototype.slice.call(document.querySelectorAll('.character-hotspot'));
+      var introAudio = document.getElementById('intro-audio');
+      var selectionAudio = document.getElementById('selection-audio');
+      var gameOverAudio = document.getElementById('game-over-audio');
       var selectedCharacter = null;
       var selectedName = null;
+      var highScore = 0;
+      var audioUnlocked = false;
 
       window.TheodoricSelection = null;
 
-      function showMessage(message) {
-        status.textContent = message;
-        status.classList.add('show');
+      function playIntro() {
+        if (!audioUnlocked) return;
+        gameOverAudio.pause(); gameOverAudio.currentTime = 0;
+        introAudio.volume = 0.55;
+        introAudio.play().catch(function () {});
       }
+      function unlockAudio() {
+        if (audioUnlocked) return;
+        audioUnlocked = true;
+        playIntro();
+      }
+      document.addEventListener('pointerdown', unlockAudio, { once: true });
+      document.addEventListener('keydown', unlockAudio, { once: true });
+
+      function playSelectionSound() {
+        if (!audioUnlocked) return;
+        selectionAudio.currentTime = 0; selectionAudio.volume = 0.38;
+        selectionAudio.play().catch(function () {});
+      }
+      function showMessage(message) { status.textContent = message; status.classList.add('show'); }
 
       characters.forEach(function (button) {
+        button.addEventListener('pointerenter', playSelectionSound);
+        button.addEventListener('focus', playSelectionSound);
         button.addEventListener('click', function () {
+          playSelectionSound();
           characters.forEach(function (item) { item.classList.remove('selected'); });
           button.classList.add('selected');
           selectedCharacter = button.getAttribute('data-character');
@@ -182,31 +257,32 @@
         });
       });
 
-      document.getElementById('new-game').addEventListener('click', function () {
-        if (!selectedCharacter) {
-          showMessage('Primero haz clic sobre uno de los tres personajes.');
-          return;
-        }
-        showMessage('Comenzando aventura con ' + selectedName + '…');
-        try {
-          if (window.Theodoric && Theodoric.game) {
-            var current = Theodoric.game.state.getCurrentState();
-            if (current && current.music && current.music.stop) current.music.stop();
-            Theodoric.game.state.start('Game');
-          }
-        } catch (error) {
-          console.error(error);
-        }
-        window.setTimeout(function () { screen.classList.add('hidden'); }, 350);
+      function startGame() {
+        if (!selectedCharacter) { showMessage('Primero haz clic sobre uno de los tres personajes.'); return; }
+        introAudio.pause(); introAudio.currentTime = 0;
+        gameOverAudio.pause(); gameOverAudio.currentTime = 0;
+        gameOverScreen.classList.add('hidden');
+        try { if (window.Theodoric && Theodoric.game) Theodoric.game.state.start('Game'); } catch (error) { console.error(error); }
+        window.setTimeout(function () { screen.classList.add('hidden'); }, 180);
+      }
+
+      document.getElementById('new-game').addEventListener('click', startGame);
+      document.getElementById('continue-game').addEventListener('click', function () { showMessage('Todavía no existe una partida guardada. Pulsa Nueva partida.'); });
+      document.getElementById('options-game').addEventListener('click', function () { showMessage('Las opciones se incorporarán en la siguiente etapa.'); });
+      document.getElementById('retry-game').addEventListener('click', startGame);
+      document.getElementById('change-character').addEventListener('click', function () {
+        gameOverAudio.pause(); gameOverAudio.currentTime = 0;
+        gameOverScreen.classList.add('hidden'); screen.classList.remove('hidden'); playIntro();
       });
 
-      document.getElementById('continue-game').addEventListener('click', function () {
-        showMessage('Todavía no existe una partida guardada. Pulsa Nueva partida.');
-      });
-
-      document.getElementById('options-game').addEventListener('click', function () {
-        showMessage('Las opciones se incorporarán en la siguiente etapa.');
-      });
+      window.showTheodoricGameOver = function (score) {
+        score = Number(score) || 0; highScore = Math.max(highScore, score);
+        document.getElementById('final-score').textContent = score;
+        document.getElementById('high-score').textContent = highScore;
+        introAudio.pause(); introAudio.currentTime = 0;
+        gameOverAudio.currentTime = 0; gameOverAudio.volume = 0.7; gameOverAudio.play().catch(function () {});
+        gameOverScreen.classList.remove('hidden');
+      };
     }());
   </script>
 </body>

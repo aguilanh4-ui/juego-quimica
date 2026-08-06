@@ -52,6 +52,7 @@ Theodoric.Game.prototype = {
         this.goldForBoss = 5000;
         this.bossSpawned = false;
         this.bossColorIndex = 0;
+        this.gameOverScheduled = false;
 
         // Generate objects
         this.generateObstacles();
@@ -69,7 +70,7 @@ Theodoric.Game.prototype = {
         this.bossAttacks = this.generateAttacks('fireball', 1, 2000, 300);
 
         // Generate enemies - must be generated after player and player.level
-        this.generateEnemies(100);
+        this.generateEnemies(50);
 
         // Generate bosses
         this.bosses = this.game.add.group();
@@ -153,7 +154,8 @@ Theodoric.Game.prototype = {
             }
         }
 
-        if (!this.player.alive) {
+        if (!this.player.alive && !this.gameOverScheduled) {
+            this.gameOverScheduled = true;
             this.deathHandler(this.player);
             this.game.time.events.add(1000, this.gameOver, this);
         }
@@ -205,6 +207,7 @@ Theodoric.Game.prototype = {
             this.bossSpawned = false;
             if (this.bossColorIndex === 7) {
                  this.bossColorIndex = 0;
+        this.gameOverScheduled = false;
             } else {
                 this.bossColorIndex++;
             }
@@ -446,8 +449,8 @@ Theodoric.Game.prototype = {
         player.name = 'Theodoric';
         player.level = 1;
 
-        player.health = 100;
-        player.vitality = 100;
+        player.health = 1000;
+        player.vitality = 1000;
         player.strength = 25;
         player.speed = 125;
 
@@ -906,8 +909,13 @@ Theodoric.Game.prototype = {
         //  Here you should destroy anything you no longer need.
         //  Stop music, delete sprites, purge caches, free resources, all that good stuff.
 
-        //  Then let's go back to the main menu.
-        this.game.state.start('MainMenu', true, false, this.xp + this.gold);
+        // Mostrar una pantalla de derrota propia sin volver al menú antiguo.
+        var finalScore = this.xp + this.gold;
+        if (window.showTheodoricGameOver) {
+            window.showTheodoricGameOver(finalScore);
+        } else {
+            this.game.state.start('MainMenu', true, false, finalScore);
+        }
     },
 
     quitGame: function (pointer) {
