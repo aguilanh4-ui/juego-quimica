@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>El Reino de la Química</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; min-height: 100%; margin: 0; background: #05070c; overflow: hidden; font-family: Georgia, 'Times New Roman', serif; }
+
+    #game-shell {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at center, #182039 0%, #05070c 72%);
+    }
+
+    #game-shell canvas {
+      max-width: 100vw;
+      max-height: 100vh;
+      width: auto !important;
+      height: auto !important;
+      image-rendering: pixelated;
+    }
+
+    #character-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: grid;
+      place-items: center;
+      padding: 10px;
+      background: #05070c;
+      transition: opacity .6s ease, visibility .6s ease;
+    }
+
+    #character-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .selection-stage {
+      position: relative;
+      width: min(100%, 150vh);
+      aspect-ratio: 3 / 2;
+      background-image: url('assets/images/character-selection.png');
+      background-size: 100% 100%;
+      background-position: center;
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(0,0,0,.9);
+    }
+
+    .character-hotspot {
+      position: absolute;
+      top: 25.6%;
+      height: 59.2%;
+      border: 2px solid transparent;
+      border-radius: 3%;
+      background: transparent;
+      cursor: pointer;
+      transition: border-color .2s ease, box-shadow .2s ease, background .2s ease, transform .2s ease, filter .2s ease;
+      outline-offset: 4px;
+    }
+
+    .character-hotspot:hover,
+    .character-hotspot:focus-visible {
+      transform: translateY(-0.8%);
+      background: rgba(255,255,255,.025);
+      border-color: rgba(235,245,255,.95);
+      box-shadow: inset 0 0 34px rgba(185,220,255,.18), 0 0 28px rgba(180,220,255,.9);
+      filter: brightness(1.13) saturate(1.08);
+    }
+
+    .character-hotspot.selected {
+      background: rgba(255,255,255,.015);
+      border-color: rgba(255,235,170,.85);
+      box-shadow: 0 0 0 2px rgba(255,215,115,.18);
+    }
+
+    .character-hotspot[data-character="kimi-man"] { left: 10.9%; width: 22.5%; }
+    .character-hotspot[data-character="kimi-woman"] { left: 38.2%; width: 22.6%; }
+    .character-hotspot[data-character="alternative-kim"] { left: 65.7%; width: 22.5%; }
+
+    .menu-hotspot {
+      position: absolute;
+      bottom: 3.3%;
+      height: 8.7%;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: transparent;
+      cursor: pointer;
+      transition: background .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+
+    .menu-hotspot:hover,
+    .menu-hotspot:focus-visible {
+      transform: translateY(-2px);
+      background: rgba(255,255,255,.06);
+      box-shadow: 0 0 22px rgba(255,215,112,.65), inset 0 0 18px rgba(255,255,255,.08);
+    }
+
+    #new-game { left: 13.7%; width: 22.5%; }
+    #continue-game { left: 39.6%; width: 20.3%; }
+    #options-game { left: 63.3%; width: 22.3%; }
+
+    #selection-status {
+      position: absolute;
+      left: 50%;
+      bottom: 12.7%;
+      transform: translateX(-50%);
+      min-width: 34%;
+      max-width: 70%;
+      padding: .45rem .8rem;
+      color: #fff3c5;
+      background: rgba(2,7,14,.78);
+      border: 1px solid rgba(221,185,94,.68);
+      border-radius: 999px;
+      text-align: center;
+      font: 600 clamp(11px, 1.15vw, 19px)/1.2 Georgia, serif;
+      letter-spacing: .02em;
+      opacity: 0;
+      transition: opacity .2s ease;
+      pointer-events: none;
+    }
+
+    #selection-status.show { opacity: 1; }
+
+    @media (max-aspect-ratio: 4/5) {
+      #character-screen { padding: 0; overflow: auto; align-items: center; }
+      .selection-stage { width: 100vw; min-width: 760px; }
+    }
+  </style>
+</head>
+<body>
+  <main id="game-shell" aria-label="Juego El Reino de la Química"></main>
+
+  <section id="character-screen" aria-label="Selección de personaje">
+    <div class="selection-stage">
+      <button class="character-hotspot" type="button" data-character="kimi-man" data-name="Kimi Man" aria-label="Seleccionar Kimi Man"></button>
+      <button class="character-hotspot" type="button" data-character="kimi-woman" data-name="Kimi Woman" aria-label="Seleccionar Kimi Woman"></button>
+      <button class="character-hotspot" type="button" data-character="alternative-kim" data-name="Alternative Kim" aria-label="Seleccionar Alternative Kim"></button>
+
+      <div id="selection-status" aria-live="polite">Selecciona un personaje</div>
+
+      <button id="new-game" class="menu-hotspot" type="button" aria-label="Iniciar nueva partida"></button>
+      <button id="continue-game" class="menu-hotspot" type="button" aria-label="Continuar partida"></button>
+      <button id="options-game" class="menu-hotspot" type="button" aria-label="Abrir opciones"></button>
+    </div>
+  </section>
+
+  <script src="js/phaser.js"></script>
+  <script src="js/Boot.js"></script>
+  <script src="js/Preloader.js"></script>
+  <script src="js/MainMenu.js"></script>
+  <script src="js/Game.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    (function () {
+      var screen = document.getElementById('character-screen');
+      var status = document.getElementById('selection-status');
+      var characters = Array.prototype.slice.call(document.querySelectorAll('.character-hotspot'));
+      var selectedCharacter = null;
+      var selectedName = null;
+
+      window.TheodoricSelection = null;
+
+      function showMessage(message) {
+        status.textContent = message;
+        status.classList.add('show');
+      }
+
+      characters.forEach(function (button) {
+        button.addEventListener('click', function () {
+          characters.forEach(function (item) { item.classList.remove('selected'); });
+          button.classList.add('selected');
+          selectedCharacter = button.getAttribute('data-character');
+          selectedName = button.getAttribute('data-name');
+          window.TheodoricSelection = { id: selectedCharacter, name: selectedName };
+          showMessage('Personaje seleccionado: ' + selectedName);
+        });
+      });
+
+      document.getElementById('new-game').addEventListener('click', function () {
+        if (!selectedCharacter) {
+          showMessage('Primero haz clic sobre uno de los tres personajes.');
+          return;
+        }
+        showMessage('Comenzando aventura con ' + selectedName + '…');
+        try {
+          if (window.Theodoric && Theodoric.game) {
+            var current = Theodoric.game.state.getCurrentState();
+            if (current && current.music && current.music.stop) current.music.stop();
+            Theodoric.game.state.start('Game');
+          }
+        } catch (error) {
+          console.error(error);
+        }
+        window.setTimeout(function () { screen.classList.add('hidden'); }, 350);
+      });
+
+      document.getElementById('continue-game').addEventListener('click', function () {
+        showMessage('Todavía no existe una partida guardada. Pulsa Nueva partida.');
+      });
+
+      document.getElementById('options-game').addEventListener('click', function () {
+        showMessage('Las opciones se incorporarán en la siguiente etapa.');
+      });
+    }());
+  </script>
+</body>
+</html>
