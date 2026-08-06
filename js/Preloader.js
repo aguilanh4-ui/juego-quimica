@@ -30,7 +30,6 @@ Theodoric.Preloader.prototype = {
 		this.load.image('sword', 'assets/images/sword.png');
 		this.load.image('levelParticle', 'assets/images/level-particle.png');
 		this.load.image('spellParticle', 'assets/images/spell-particle.png');
-		this.load.image('bioMap', 'assets/images/biochemistry-map.png');
 
 		this.load.spritesheet('tiles', 'assets/images/tiles.png', 16, 16);
 		this.load.spritesheet('things', 'assets/images/things.png', 16, 16);
