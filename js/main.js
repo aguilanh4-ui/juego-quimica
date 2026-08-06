@@ -3,7 +3,7 @@ var Theodoric = Theodoric || {};
 
 // Initiate a new game and set the size of the entire windows
 // Phaser.AUTO means that whether the game will be rendered on a CANVAS element or using WebGL will depend on the browser
-Theodoric.game = new Phaser.Game(512, 384, Phaser.AUTO, 'game-shell', null, false, false);
+Theodoric.game = new Phaser.Game(960, 640, Phaser.AUTO, 'game-shell', null, false, true);
 
 Theodoric.game.state.add('Boot', Theodoric.Boot);
 Theodoric.game.state.add('Preloader', Theodoric.Preloader);

@@ -35,11 +35,13 @@ Theodoric.Game.prototype = {
     create: function () {
 
         // Generate in order of back to front
-        var worldSize = 1920;
+        var worldSize = 1280;
         this.game.world.setBounds(0, 0, worldSize, worldSize);
 
-        this.background = this.game.add.tileSprite(0, 0, this.game.world.width / 2, this.game.world.height / 2, 'tiles', 65);
-        this.background.scale.setTo(2);
+        // Fixed biochemistry campus map. It replaces the repeated grass tile.
+        this.background = this.game.add.image(0, 0, 'bioMap');
+        this.background.width = worldSize;
+        this.background.height = worldSize;
 
         this.generateGrid(worldSize);
 
@@ -54,7 +56,7 @@ Theodoric.Game.prototype = {
         this.bossColorIndex = 0;
 
         // Generate objects
-        this.generateObstacles();
+        this.generateMapColliders();
         this.generateCollectables();
 
         this.corpses = this.game.add.group();
@@ -69,7 +71,7 @@ Theodoric.Game.prototype = {
         this.bossAttacks = this.generateAttacks('fireball', 1, 2000, 300);
 
         // Generate enemies - must be generated after player and player.level
-        this.generateEnemies(100);
+        this.generateEnemies(35);
 
         // Generate bosses
         this.bosses = this.game.add.group();
@@ -428,7 +430,7 @@ Theodoric.Game.prototype = {
     generatePlayer: function () {
 
         // Generate the player
-        var player = this.game.add.sprite(this.game.world.centerX, this.game.world.centerY, 'characters');
+        var player = this.game.add.sprite(620, 610, 'characters');
 
         // Loop through frames 3, 4, and 5 at 10 frames a second while the animation is playing
         player.animations.add('down', [3, 4, 5], 10, true);
@@ -618,58 +620,65 @@ Theodoric.Game.prototype = {
         return this.setStats(boss, 'Dragon', 2000, 100, 50, 500, 0);
     },
 
-    generateObstacles: function() {
+    generateMapColliders: function() {
 
+        // Invisible collision rectangles aligned with the visible scenery.
+        // The central lawn and main paths intentionally remain open.
         this.obstacles = this.game.add.group();
         this.obstacles.enableBody = true;
+        this.obstacles.physicsBodyType = Phaser.Physics.ARCADE;
 
-        var amount = 300;
-        for (var i = 0; i < amount; i++) {
-            var point = this.getRandomLocation();
-            var spriteIndex = Math.floor(Math.random() * 10);
-            this.generateObstacle(point, spriteIndex);
+        var zones = [
+            // Upper laboratory campus
+            [0, 0, 220, 275],          // tanks and machines, upper-left
+            [590, 0, 150, 145],        // large upper tree
+            [870, 0, 410, 285],        // laboratory building
+            [0, 305, 190, 205],        // giant flask, left
+            [205, 455, 155, 125],      // Bioquímica sign
+            [710, 320, 135, 105],      // central bench
+            [895, 455, 185, 160],      // DNA worktable
+            [1125, 485, 155, 225],     // purple reactor, right
+
+            // Lower campus equipment
+            [0, 655, 215, 175],        // shelves and chemistry table
+            [1040, 805, 240, 200],     // blue fountain and pipes
+            [425, 1070, 435, 210],     // research-centre gate and walls
+            [1070, 1030, 210, 250],    // barrels and ruins
+
+            // Large trees and structural obstacles around the borders
+            [0, 990, 175, 250],
+            [315, 1085, 125, 195],
+            [735, 1090, 130, 190],
+            [1180, 255, 100, 135],
+
+            // Selected isolated scenery (small hitboxes for comfortable movement)
+            [445, 105, 105, 70],       // upper bench
+            [405, 265, 70, 70],        // upper rock
+            [770, 535, 65, 70],        // centre-right rock
+            [315, 590, 65, 70],        // centre-left rock
+            [805, 635, 55, 70],        // small rock right of start
+            [385, 895, 65, 65],        // lower-left rock
+            [770, 920, 65, 75]         // lower-middle rock
+        ];
+
+        for (var i = 0; i < zones.length; i++) {
+            this.createCollisionZone(zones[i][0], zones[i][1], zones[i][2], zones[i][3]);
         }
     },
 
-    generateObstacle: function (location, spriteIndex) {
+    createCollisionZone: function(x, y, width, height) {
+        var marker = this.game.add.bitmapData(2, 2);
+        marker.ctx.fillStyle = '#ffffff';
+        marker.ctx.fillRect(0, 0, 2, 2);
 
-        obstacle = this.obstacles.create(location.x, location.y, 'tiles');
-
-        if (spriteIndex === 0) {
-            obstacle.animations.add('tree', [38], 0, true);
-            obstacle.animations.play('tree');
-        } else if (spriteIndex === 1) {
-            obstacle.animations.add('tree', [38], 0, true);
-            obstacle.animations.play('tree');
-        } else if (spriteIndex === 2) {
-            obstacle.animations.add('shrub', [20], 0, true);
-            obstacle.animations.play('shrub');
-        } else if (spriteIndex === 3) {
-            obstacle.animations.add('pine', [30], 0, true);
-            obstacle.animations.play('pine');
-        } else if (spriteIndex === 4) {
-            obstacle.animations.add('tree', [38], 0, true);
-            obstacle.animations.play('tree');
-        } else if (spriteIndex === 5) {
-            obstacle.animations.add('column', [39], 0, true);
-            obstacle.animations.play('column');
-        } else if (spriteIndex === 6) {
-            obstacle.animations.add('tree', [38], 0, true);
-            obstacle.animations.play('tree');
-        } else if (spriteIndex === 7) {
-            obstacle.animations.add('tree', [38], 0, true);
-            obstacle.animations.play('tree');
-        } else if (spriteIndex === 8) {
-            obstacle.animations.add('tree', [38], 0, true);
-            obstacle.animations.play('tree');
-        } else if (spriteIndex === 9) {
-            obstacle.animations.add('tree', [38], 0, true);
-            obstacle.animations.play('tree');
-        }
-        obstacle.scale.setTo(2);
-        obstacle.body.setSize(8, 8, 4, -2);
+        var obstacle = this.game.add.sprite(x, y, marker);
+        obstacle.width = width;
+        obstacle.height = height;
+        obstacle.alpha = 0;
+        this.game.physics.arcade.enable(obstacle);
+        obstacle.body.immovable = true;
         obstacle.body.moves = false;
-
+        this.obstacles.add(obstacle);
         return obstacle;
     },
 
@@ -679,7 +688,7 @@ Theodoric.Game.prototype = {
         this.collectables.enableBody = true;
         this.collectables.physicsBodyType = Phaser.Physics.ARCADE;
 
-        var amount = 100;
+        var amount = 35;
         for (var i = 0; i < amount; i++) {
             var point = this.getRandomLocation();
             this.generateChest(point);
