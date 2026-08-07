@@ -53,6 +53,12 @@ Theodoric.Game.prototype = {
         this.bossSpawned = false;
         this.bossColorIndex = 0;
         this.gameOverScheduled = false;
+        this.knowledge = 0;
+        this.questionsAnswered = 0;
+        this.correctAnswers = 0;
+        this.questionDeck = this.createQuestionDeck();
+        this.questionCursor = 0;
+        this.questionActive = false;
 
         // Generate objects
         this.generateObstacles();
@@ -114,6 +120,8 @@ Theodoric.Game.prototype = {
         this.xpLabel.text = 'Lvl. ' + this.player.level + ' - ' + this.xp + ' XP / ' + this.xpToNext + ' XP';
         this.goldLabel.text = this.gold + ' Gold';
         this.healthLabel.text = this.player.health + ' / ' + this.player.vitality;
+        this.knowledgeLabel.text = 'Conocimiento: ' + this.knowledge + ' pts';
+        this.questionLabel.text = 'Preguntas: ' + this.correctAnswers + '/' + this.questionsAnswered;
     },
 
     playerHandler: function() {
@@ -278,6 +286,14 @@ Theodoric.Game.prototype = {
         var style = { font: '10px Arial', fill: '#fff', align: 'center' };
         this.spellLabel = this.game.add.text(230, this.game.height - 25, text, style);
         this.spellLabel.fixedToCamera = true;
+
+        style = { font: '12px Arial', fill: '#8fffe8', align: 'left' };
+        this.knowledgeLabel = this.game.add.text(25, 45, 'Conocimiento: 0 pts', style);
+        this.knowledgeLabel.fixedToCamera = true;
+
+        style = { font: '12px Arial', fill: '#fff3a6', align: 'left' };
+        this.questionLabel = this.game.add.text(25, 63, 'Preguntas: 0/0', style);
+        this.questionLabel.fixedToCamera = true;
     },
 
     levelUp: function() {
@@ -398,11 +414,7 @@ Theodoric.Game.prototype = {
                 this.notification = 'You pick up ' + collectable.value + ' gold.';
                 collectable.destroy();
             } else if (collectable.name === 'chest') {
-                collectable.animations.play('open');
-                this.gold += collectable.value;
-                this.goldSound.play();
-                this.notification = 'You open a chest and find ' + collectable.value + ' gold!';
-                collectable.lifespan = 1000;
+                this.openQuestionChest(collectable);
             } else if (collectable.name === 'healthPotion') {
                 player.health += collectable.value;
                 this.notification = 'You consume a potion, healing you for ' + collectable.value + ' health.';
@@ -426,6 +438,63 @@ Theodoric.Game.prototype = {
             }
 
         }
+    },
+
+    createQuestionDeck: function() {
+        var count = (window.BIOCHEM_QUESTIONS || []).length;
+        var deck = [];
+        for (var i = 0; i < count; i++) deck.push(i);
+        for (var j = deck.length - 1; j > 0; j--) {
+            var k = Math.floor(Math.random() * (j + 1));
+            var tmp = deck[j]; deck[j] = deck[k]; deck[k] = tmp;
+        }
+        return deck;
+    },
+
+    nextBiochemQuestion: function() {
+        var bank = window.BIOCHEM_QUESTIONS || [];
+        if (!bank.length) return null;
+        if (this.questionCursor >= this.questionDeck.length) {
+            this.questionDeck = this.createQuestionDeck();
+            this.questionCursor = 0;
+        }
+        return bank[this.questionDeck[this.questionCursor++]];
+    },
+
+    openQuestionChest: function(collectable) {
+        if (this.questionActive) return;
+        var question = this.nextBiochemQuestion();
+        if (!question || !window.showBiochemQuestion) {
+            this.gold += collectable.value;
+            collectable.animations.play('open');
+            collectable.lifespan = 1000;
+            return;
+        }
+
+        this.questionActive = true;
+        collectable.animations.play('open');
+        this.player.body.velocity.setTo(0, 0);
+        this.game.paused = true;
+
+        var self = this;
+        window.showBiochemQuestion(question, function(correct) {
+            self.questionsAnswered += 1;
+            if (correct) {
+                self.correctAnswers += 1;
+                self.knowledge += 100;
+                self.gold += collectable.value;
+                self.player.health = Math.min(self.player.vitality, self.player.health + 25);
+                self.notification = '¡Correcto! +100 conocimiento y +' + collectable.value + ' fichas.';
+                if (self.goldSound) self.goldSound.play();
+            } else {
+                self.player.health = Math.max(0, self.player.health - 50);
+                if (self.player.health <= 0) self.player.kill();
+                self.notification = 'Respuesta incorrecta: -50 de vida. Sigue explorando.';
+            }
+            collectable.lifespan = 600;
+            self.questionActive = false;
+            self.game.paused = false;
+        });
     },
 
     generatePlayer: function () {
@@ -910,9 +979,9 @@ Theodoric.Game.prototype = {
         //  Stop music, delete sprites, purge caches, free resources, all that good stuff.
 
         // Mostrar una pantalla de derrota propia sin volver al menú antiguo.
-        var finalScore = this.xp + this.gold;
+        var finalScore = this.xp + this.gold + this.knowledge;
         if (window.showTheodoricGameOver) {
-            window.showTheodoricGameOver(finalScore);
+            window.showTheodoricGameOver(finalScore, this.knowledge, this.correctAnswers, this.questionsAnswered);
         } else {
             this.game.state.start('MainMenu', true, false, finalScore);
         }
@@ -925,7 +994,7 @@ Theodoric.Game.prototype = {
 		this.music.stop();
 
         //  Then let's go back to the main menu.
-        this.game.state.start('MainMenu', true, false, this.xp + this.gold);
+        this.game.state.start('MainMenu', true, false, this.xp + this.gold + this.knowledge);
     },
 
     rng: function (floor, ceiling) {
