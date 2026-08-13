@@ -8,6 +8,7 @@ var Theodoric = Theodoric || {};
     var proto = Theodoric.Game.prototype;
     var originalCreate = proto.create;
     var originalUpdate = proto.update;
+    var originalGeneratePlayer = proto.generatePlayer;
     var originalGenerateEnemy = proto.generateEnemy;
     var originalGenerateDragon = proto.generateDragon;
     var originalGenerateChest = proto.generateChest;
@@ -113,7 +114,6 @@ var Theodoric = Theodoric || {};
         var worldW = this.game.world.width;
         var worldH = this.game.world.height;
 
-        // Broad translucent patches break up the repeated grass tile and create depth.
         for (var i = 0; i < 125; i++) {
             var x = Math.random() * worldW;
             var y = Math.random() * worldH;
@@ -125,7 +125,6 @@ var Theodoric = Theodoric || {};
             terrain.endFill();
         }
 
-        // Small stones / highlights add a more dimensional ground texture.
         for (var j = 0; j < 180; j++) {
             var sx = Math.random() * worldW;
             var sy = Math.random() * worldH;
@@ -137,7 +136,6 @@ var Theodoric = Theodoric || {};
             terrain.endFill();
         }
 
-        // Put terrain just above the repeating background, below gameplay objects.
         try {
             this.game.world.setChildIndex(this._terrainGroupV2, 1);
         } catch (e) {}
@@ -162,7 +160,6 @@ var Theodoric = Theodoric || {};
             }, this);
         }
 
-        // Existing obstacles remain pixel-art, but subtle scale variation and smoothing make them feel less flat.
         if (this.obstacles) {
             this.obstacles.forEach(function (o) {
                 o.smoothed = true;
@@ -171,7 +168,6 @@ var Theodoric = Theodoric || {};
             }, this);
         }
 
-        // Improve HUD legibility without replacing the game UI.
         var hudTexts = [this.notificationLabel, this.xpLabel, this.healthLabel, this.goldLabel, this.spellLabel, this.knowledgeLabel, this.questionLabel];
         hudTexts.forEach(function (label) {
             if (!label) return;
@@ -223,7 +219,48 @@ var Theodoric = Theodoric || {};
         if (this.collectables) this.collectables.forEachAlive(function (e) { this._syncShadowV2(e); }, this);
     };
 
-    // Decorate entities created after the initial map load.
+    // The character sheet already contains three separate hero columns.
+    // Connect the selection screen to those three visual variants.
+    proto.generatePlayer = function () {
+        var player = originalGeneratePlayer.apply(this, arguments);
+        var selection = window.TheodoricSelection || { id: 'kimi-woman', name: 'Kimi Woman' };
+        var profiles = {
+            'kimi-man': {
+                name: 'Kimi Man',
+                base: 0,
+                accent: 0x8fd8ff
+            },
+            'kimi-woman': {
+                name: 'Kimi Woman',
+                base: 3,
+                accent: 0xffb7df
+            },
+            'alternative-kim': {
+                name: 'Alternative Kim',
+                base: 6,
+                accent: 0xc7ff9b
+            }
+        };
+        var profile = profiles[selection.id] || profiles['kimi-woman'];
+        var b = profile.base;
+
+        player.animations.remove('down');
+        player.animations.remove('left');
+        player.animations.remove('right');
+        player.animations.remove('up');
+        player.animations.add('down', [b, b + 1, b + 2], 10, true);
+        player.animations.add('left', [b + 12, b + 13, b + 14], 10, true);
+        player.animations.add('right', [b + 24, b + 25, b + 26], 10, true);
+        player.animations.add('up', [b + 36, b + 37, b + 38], 10, true);
+        player.animations.play('down');
+
+        player.name = profile.name;
+        player.characterId = selection.id;
+        player.characterAccent = profile.accent;
+
+        return player;
+    };
+
     proto.generateEnemy = function () {
         var entity = originalGenerateEnemy.apply(this, arguments);
         if (this._shadowGroupV2) this._decorateEntityV2(entity, 'enemy');
